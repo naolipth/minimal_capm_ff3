@@ -8,7 +8,7 @@ from getFamaFrenchFactors import famaFrench3Factor
 from data_cache import pandas_cache
 
 
-def load_sp500_tickers() -> pd.DataFrame:
+def load_sp500_tickers() -> pd.Series:
     data_folder = Path.cwd().parent.joinpath('data')
     df: pd.DataFrame
 
@@ -21,7 +21,7 @@ def load_sp500_tickers() -> pd.DataFrame:
         all_data.to_csv(data_folder.joinpath('S&P500-Symbols.csv'), columns=['Symbol'], index=False)
         df = all_data[['Symbol']]
 
-    return df
+    return df.squeeze()
 
 
 @pandas_cache
