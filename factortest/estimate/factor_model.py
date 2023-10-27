@@ -4,74 +4,59 @@ import pandas as pd
 import statsmodels.api as sm
 
 
-def estimate_ff3(
-    monthly_returns: pd.DataFrame,
-    left_hand_side_variable: str,
-    right_hand_side_variables: List,
-    ticker_column: str,
-) -> Tuple:
-    params = {}
+def estimate_ff3(monthly_returns: pd.DataFrame, left_hand_side_variable: str, right_hand_side_variables: List,
+                 ticker_column: str, ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    df = monthly_returns.copy()
+    pvalues = []
     betas = []
-    ticker_based_groups = monthly_returns.groupby([ticker_column])
+    ticker_based_groups = df.groupby([ticker_column])
 
     for ticker, data in ticker_based_groups:
         Y = data.loc[:, left_hand_side_variable]
         X = data.loc[:, right_hand_side_variables]
         X = sm.add_constant(X)
         model = sm.OLS(Y, X).fit()
-        temp_dict = {
-            ticker: {
-                "intercept coef": model.params[0],
-                "intercept p-value": model.pvalues[0],
-                right_hand_side_variables[0] + " coef": model.params[1],
-                right_hand_side_variables[0] + " p-value": model.pvalues[1],
-                right_hand_side_variables[1] + " coef": model.params[2],
-                right_hand_side_variables[1] + " p-value": model.pvalues[2],
-                right_hand_side_variables[2] + " coef": model.params[3],
-                right_hand_side_variables[2] + " p-value": model.pvalues[3],
-            }
-        }
 
-        betas.append(model.params.drop("const"))
-        params.update(temp_dict)
-    beta_df = pd.DataFrame(
-        betas,
-        columns=right_hand_side_variables,
-        index=monthly_returns[ticker_column].unique(),
-    )
-    params_df = pd.DataFrame.from_dict(params, orient="index")
-    return params_df, beta_df
+        betas.append(model.params)
+        pvalues.append(model.params)
+
+    rhs_vars = ['const', *right_hand_side_variables]
+
+    beta_df = pd.DataFrame(betas, columns=rhs_vars, index=df[ticker_column].unique())
+    beta_df.index.name = ticker_column
+
+    pvalues_df = pd.DataFrame(pvalues, columns=rhs_vars, index=df[ticker_column].unique())
+    pvalues_df.index.name = ticker_column
+
+    return beta_df, pvalues_df
 
 
-def estimate_capm(
-    monthly_returns: pd.DataFrame,
-    left_hand_side_variable: str,
-    right_hand_side_variable: str,
-    ticker_column: str,
-) -> Tuple:
-    params = {}
+def estimate_capm(monthly_returns: pd.DataFrame, left_hand_side_variable: str, right_hand_side_variable: str,
+                  ticker_column: str, ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    df = monthly_returns.copy()
+    pvalues = []
     betas = []
-    ticker_based_groups = monthly_returns.groupby([ticker_column])
+    ticker_based_groups = df.groupby([ticker_column])
 
     for ticker, data in ticker_based_groups:
         Y = data.loc[:, left_hand_side_variable]
         X = data.loc[:, right_hand_side_variable]
         X = sm.add_constant(X)
         model = sm.OLS(Y, X).fit()
-        temp_dict = {
-            ticker: {
-                "intercept coef": model.params[0],
-                "intercept p-value": model.pvalues[0],
-                right_hand_side_variable + " coef": model.params[1],
-                right_hand_side_variable + " p-value": model.pvalues[1],
-            }
-        }
-        betas.append(model.params.drop("const"))
-        params.update(temp_dict)
-    beta_df = pd.DataFrame(
-        betas,
-        columns=[right_hand_side_variable],
-        index=monthly_returns[ticker_column].unique(),
-    )
+
+        betas.append(model.params)
+        pvalues.append(model.params)
+
+    rhs_vars = ['const', right_hand_side_variable]
+
+    beta_df = pd.DataFrame(betas, columns=rhs_vars, index=df[ticker_column].unique())
+    beta_df.index.name = ticker_column
+
+    pvalues_df = pd.DataFrame(pvalues, columns=rhs_vars, index=df[ticker_column].unique())
+    pvalues_df.index.name = ticker_column
+
+    return beta_df, pvalues_df
+
+
     params_df = pd.DataFrame.from_dict(params, orient="index")
     return params_df, beta_df
