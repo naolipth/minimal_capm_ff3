@@ -58,5 +58,22 @@ def estimate_capm(monthly_returns: pd.DataFrame, left_hand_side_variable: str, r
     return beta_df, pvalues_df
 
 
-    params_df = pd.DataFrame.from_dict(params, orient="index")
-    return params_df, beta_df
+def estimate_factor_exposure(monthly_returns: pd.DataFrame, expected_return: str, factor_betas: List) -> Tuple[
+    pd.DataFrame, pd.DataFrame]:
+    df = monthly_returns.copy()
+    lambdas = []
+    pvalues = []
+
+    for period in df.index.unique():
+        step2 = sm.OLS(endog=df[expected_return].loc[period],
+                       exog=df[factor_betas].loc[period]).fit()
+        lambdas.append(step2.params)
+        pvalues.append(step2.pvalues)
+
+    lambda_pd = pd.DataFrame(lambdas, index=df.index.unique(), columns=factor_betas)
+    lambda_pd.index.name = 'Date'
+
+    pvalues_pd = pd.DataFrame(pvalues, index=df.index.unique(), columns=factor_betas)
+    pvalues_pd.index.name = 'Date'
+
+    return lambda_pd, pvalues_pd
